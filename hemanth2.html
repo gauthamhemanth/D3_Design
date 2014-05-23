@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+	circle {
+		stroke: #fff;
+	}
+
+	
+</style>
+<body>
+
+	<script src="http://mbostock.github.com/d3/d3.js?2.7.4"></script>
+	<script src="http://mbostock.github.com/d3/d3.geom.js?2.7.4"></script>
+	<script src="http://mbostock.github.com/d3/d3.layout.js?2.7.4"></script>
+	<script>
+	function countMoviesInYear(a) {
+				var temp = {};
+				for (var i = 0; i < a.length; i++) {
+					if( (a[i][1]) != null ){
+						if (isNaN(temp[a[i][1]])) {
+							temp[a[i][1]] = 1;
+						} else {
+						++temp[a[i][1]];
+						}}}
+				return temp;
+			}
+	
+		dataset = [];
+		function setupSVG() {
+
+			margin = {
+				top : 0,
+				right : 0,
+				bottom : 0,
+				left : 0
+			}, width = 960 - margin.left - margin.right, height = 1000 - margin.top - margin.bottom;
+
+			svg = d3.select("body").append("svg")
+				.attr("viewBox", "0 0 " + width + " " + height).attr("preserveAspectRatio", "xMidYMid meet")
+				.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+		}  setupSVG();
+
+	
+		function setData() {
+			var initialDataset = [];
+			d3.csv("data/films.csv", function(data) {
+				initialDataset = data.map(function(d) {
+					return [d["Title"], +d["Year"], +d["Popularity"]];
+				});
+				dataset = d3.entries(countMoviesInYear(initialDataset));continueWithOtherFunctions();
+			});
+
+		}		setData();
+function continueWithOtherFunctions() {
+
+			var n = dataset.length, radius = d3.scale.sqrt().domain([
+											d3.min(dataset, function(d) {return d.value;}), 
+											d3.max(dataset, function(d) {return d.value;})])
+										.range([0, 50]), 
+										padding = 6,
+				color = d3.scale.category20b();
+			i = 0;
+
+			nodes = d3.range(n).map(function() {
+
+				return {
+					radius : radius(dataset[i].value),
+					color : color((i++) % 20)
+				};
+			});
+			
+			
+
+			force = d3.layout.force()
+						.nodes(nodes)
+						.size([width/2, (height+50)/2])
+						.gravity(0.3)
+						.charge(-200)
+						.linkDistance(40)
+					.on("tick", tick).start();
+					
+					force.tick();
+
+			circle = svg.selectAll("circle").data(nodes);
+
+			circle.enter().append("circle").attr("yearOfMovie", function(d, i) {
+				return dataset[i].key;
+			}).attr("r", function(d) {
+				return Math.abs(d.radius);
+			}).style("fill", function(d) {
+				return d.color;
+			});
+			
+			
+			function getListOfMoviessss() {
+				mListDataset = [];
+				d3.csv("data/films.csv", function(data) {
+					mListDataset = data.map(function(d) {
+					if(d["Year"] == year_of_movie){
+						return [d["Title"], +d["Year"], +d["Popularity"]];
+						}
+						else{
+						return null;
+						}
+					});
+					
+					printBox();
+			
+			});
+			}
+			circle.call(force.drag);
+init_rad =0;
+			circle.on("click", function(someObj) {
+				if( (d3.select(this).attr("yearOfMovie")) != "undefined" ){
+					year_of_movie = d3.select(this).attr("yearOfMovie");
+					console.log(year_of_movie);
+					d3.event.stopPropagation();
+					init_rad = 					d3.select(this).transition().attr("r");
+					d3.select(this).transition().attr("r", width).each("end", function(){
+					
+					svg.select(".legend").remove();
+							svg.selectAll("circle").transition().attr("opacity", 0);
+							d3.select(this).transition().attr("r", init_rad);
+							
+							
+							
+							//generate list of movies
+							getListOfMoviessss();
+							
+							
+							
+							
+					});
+				}
+					d3.event.stopPropagation();	
+			});
+			
+
+			//print box
+			
+			function printBox() {
+					
+			
+					var mlist = svg.append("g")
+									.attr("class", "mlist")
+									.attr("x", (width-20)/2)
+									.attr("y", 25)
+									.attr("height", 100)
+									.attr("width", 100);
+									
+						mlist.append("text")
+							.attr("x", (width-50)/2)
+							.attr("y", 20)
+							.attr("height", 14)
+							.text("LIST OF MOVIES IN YEAR");
+							
+							mlist.append("text")
+								.attr("x", width/2)
+								.attr("y", 40)
+								.attr("height", 10)
+								.attr("width", 100)
+								.text("MOVIE"  +" -  " + "POPULARITY");
+					counter = 0;
+				mlist.selectAll('g').data(mListDataset).enter().append('g').each(function(d, i) {
+									var g = d3.select(this);
+					
+					if(d != null){
+					console.log(d);
+						g.append("text")
+							.attr("x", width/2)
+							.attr("y", (++counter) * 25 + 40)
+							.attr("height", 10)
+							.attr("width", 100)
+							.text(d[0]  +" -  " +d[1]);
+					}
+									
+				
+								});
+				mlist.on("dblclick", function(){
+				d3.select(this).remove();
+						continueWithOtherFunctions();
+					svg.selectAll("circle").attr("opacity", 1);
+				});
+			
+			}
+			
+			//createlegend
+			Legend();
+
+
+			// Adds legend
+			function Legend() {
+
+				var legend = svg.append("g")
+								.attr("class", "legend")
+								.attr("x", width - 65)
+								.attr("y", 25)
+								.attr("height", 100)
+								.attr("width", 100);
+
+				legend.append("text")
+					.attr("x", width - 130)
+					.attr("y", 20)
+					.attr("height", 10)
+					.attr("width", 100)
+					.text("LEGEND");
+
+				legend.selectAll('g').data(dataset).enter().append('g').each(function(d, i) {
+					var g = d3.select(this);
+					
+					g.append("rect")
+						.attr("x", width - 120)
+						.attr("y", (i + 1) * 25 + 10)
+						.attr("width", 10)
+						.attr("height", 10)
+						.style("fill", nodes[i].color);
+
+					g.append("text")
+						.attr("x", width - 110)
+						.attr("y", (i + 1) * 25 + 20)
+						.attr("height", 10)
+						.attr("width", 100)
+						.text(d.key + ": " + d.value);
+
+				});
+			}
+
+			
+
+function cluster(alpha) {
+				var max = {};
+
+				nodes.forEach(function(d) {
+					if (!(d.color in max) || (d.radius > max[d.color].radius)) {
+						max[d.color] = d;
+					}
+				});
+
+				return function(d) {
+					var node = max[d.color], l, r, x, y, i = -1;
+
+					if (node == d)
+						return;
+
+					x = d.x - node.x;
+					y = d.y - node.y;
+					l = Math.sqrt(x * x + y * y);
+					r = d.radius + node.radius;
+					if (l != r) {
+						l = (l - r) / l * alpha;
+						d.x -= x *= l;
+						d.y -= y *= l;
+						node.x += x;
+						node.y += y;
+					}
+				};
+			}
+
+			
+			function tick(e) {
+				var circle = svg.selectAll("circle");
+				circle.each(cluster(10 * e.alpha * e.alpha)).each(collide(.5)).attr("cx", function(d) {
+					return d.x;
+				}).attr("cy", function(d) {
+					return d.y;
+				});
+			}
+
+			
+			function collide(alpha) {
+				var quadtree = d3.geom.quadtree(nodes);
+				return function(d) {
+					var r = d.radius + radius.domain()[1] + padding, nx1 = d.x - r, nx2 = d.x + r, ny1 = d.y - r, ny2 = d.y + r;
+					quadtree.visit(function(quad, x1, y1, x2, y2) {
+						if (quad.point && (quad.point !== d)) {
+							var x = d.x - quad.point.x, y = d.y - quad.point.y, l = Math.sqrt(x * x + y * y), r = d.radius + quad.point.radius + (d.color !== quad.point.color) * padding;
+							if (l < r) {
+								l = (l - r) / l * alpha;
+								d.x -= x *= l;
+								d.y -= y *= l;
+								quad.point.x += x;
+								quad.point.y += y;
+							}
+						}
+						return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+					});
+				};
+			}
+
+		}
+
+	</script>
+
+</body>
+</html>
